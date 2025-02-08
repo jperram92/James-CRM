@@ -109,17 +109,38 @@ else:
 # Contact form to add a new contact
 st.subheader('Add New Contact')
 with st.form(key='contact_form'):
-    title = st.text_input("Title")
-    gender = st.text_input("Gender")
+    # Title picklist
+    title = st.selectbox("Title", ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."])
+    
+    # Gender picklist
+    gender = st.selectbox("Gender", ["Male", "Female", "Non-binary", "Prefer not to say"])
+    
+    # Name input
     name = st.text_input("Name")
+    
+    # Email input
     email = st.text_input("Email")
+    
+    # Phone input
     phone = st.text_input("Phone")
+    
+    # Message input
     message = st.text_area("Message")
+    
+    # Address fields
     address_line = st.text_input("Address Line")
     suburb = st.text_input("Suburb")
     postcode = st.text_input("Postcode")
-    state = st.text_input("State")
-    country = st.text_input("Country")
+    
+    # State picklist (Australia)
+    state = st.selectbox("State", [
+        "New South Wales", "Victoria", "Queensland", "South Australia", 
+        "Western Australia", "Tasmania", "Australian Capital Territory", 
+        "Northern Territory", "Jervis Bay Territory"
+    ])
+    
+    # Country input (auto-fill with Australia for consistency)
+    country = st.text_input("Country", value="Australia", disabled=True)
     
     submit_button = st.form_submit_button(label="Add Contact")
     
@@ -145,8 +166,8 @@ if search_name:
 
             # Form to update a contact
             with st.form(key=f'update_form_{contact["id"]}'):
-                update_title = st.text_input("Update Title", value=contact['title'])
-                update_gender = st.text_input("Update Gender", value=contact['gender'])
+                update_title = st.selectbox("Update Title", ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."], index=["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."].index(contact['title']))
+                update_gender = st.selectbox("Update Gender", ["Male", "Female", "Non-binary", "Prefer not to say"], index=["Male", "Female", "Non-binary", "Prefer not to say"].index(contact['gender']))
                 update_name = st.text_input("Update Name", value=contact['name'])
                 update_email = st.text_input("Update Email", value=contact['email'])
                 update_phone = st.text_input("Update Phone", value=contact['phone'])
@@ -154,8 +175,13 @@ if search_name:
                 update_address_line = st.text_input("Update Address Line", value=contact['address_line'])
                 update_suburb = st.text_input("Update Suburb", value=contact['suburb'])
                 update_postcode = st.text_input("Update Postcode", value=contact['postcode'])
-                update_state = st.text_input("Update State", value=contact['state'])
-                update_country = st.text_input("Update Country", value=contact['country'])
+                update_state = st.selectbox("Update State", [
+                    "New South Wales", "Victoria", "Queensland", "South Australia", 
+                    "Western Australia", "Tasmania", "Australian Capital Territory", 
+                    "Northern Territory", "Jervis Bay Territory"], index=["New South Wales", "Victoria", "Queensland", "South Australia", 
+                    "Western Australia", "Tasmania", "Australian Capital Territory", 
+                    "Northern Territory", "Jervis Bay Territory"].index(contact['state']))
+                update_country = st.text_input("Update Country", value=contact['country'], disabled=True)
 
                 update_button = st.form_submit_button(label="Update Contact")
 
