@@ -1,5 +1,6 @@
 import streamlit as st
 import sqlite3
+import pandas as pd
 
 # Function to connect to the database
 def get_db_connection():
@@ -18,23 +19,23 @@ def insert_contact(name, email, phone, message):
     conn.commit()
     conn.close()
 
-# Function to update an existing contact
-def update_contact(contact_name, name, email, phone, message):
+# Function to update an existing contact by ID
+def update_contact(contact_id, name, email, phone, message):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
     UPDATE contacts
     SET name = ?, email = ?, phone = ?, message = ?
-    WHERE name = ?
-    ''', (name, email, phone, message, contact_name))
+    WHERE id = ?
+    ''', (name, email, phone, message, contact_id))  # Update using ID instead of name
     conn.commit()
     conn.close()
 
-# Function to delete a contact
-def delete_contact(contact_name):
+# Function to delete a contact by ID
+def delete_contact(contact_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM contacts WHERE name = ?', (contact_name,))
+    cursor.execute('DELETE FROM contacts WHERE id = ?', (contact_id,))
     conn.commit()
     conn.close()
 
@@ -59,12 +60,17 @@ def display_contacts():
 # Streamlit interface
 st.title('Contact Management CRM')
 
-# Display existing contacts
+# Get the contacts and convert them to a dataframe for display
 contacts = display_contacts()
 if contacts:
+    # Convert the list of contacts into a DataFrame
+    contacts_df = pd.DataFrame(contacts, columns=['id', 'name', 'email', 'phone', 'message'])
+    
+    # Display the DataFrame as a table
     st.subheader('Existing Contacts')
-    for contact in contacts:
-        st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}")
+    st.dataframe(contacts_df)  # This will display the contacts in a table format
+else:
+    st.write("No contacts available.")
 
 # Contact form to add a new contact
 st.subheader('Add New Contact')
@@ -101,7 +107,7 @@ if search_name:
                 update_button = st.form_submit_button(label="Update Contact")
                 
                 if update_button and update_name and update_email and update_phone and update_message:
-                    update_contact(contact['name'], update_name, update_email, update_phone, update_message)
+                    update_contact(contact['id'], update_name, update_email, update_phone, update_message)  # Use ID for updating
                     st.success(f"Contact '{contact['name']}' updated successfully!")
                     st.rerun()  # Refresh the app to show the updated contact
     else:
@@ -117,10 +123,11 @@ if delete_name:
         for contact in search_results_to_delete:
             st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}")
             
-            delete_button = st.button(f"Delete {contact['name']}")
+            # Give each delete button a unique key based on the contact's ID
+            delete_button = st.button(f"Delete {contact['name']}", key=f"delete_{contact['id']}")
             
             if delete_button:
-                delete_contact(contact['name'])
+                delete_contact(contact['id'])  # Use ID for deletion
                 st.success(f"Contact '{contact['name']}' deleted successfully!")
                 st.rerun()  # Refresh the app to remove the deleted contact
     else:
