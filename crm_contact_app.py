@@ -48,6 +48,48 @@ def update_contact(contact_id, title, gender, name, email, phone, message, addre
     conn.close()
     return True
 
+# Function to send email using SMTP
+def send_email(to_email, subject, body):
+    from_email = "8542f6001@smtp-brevo.com"  # Replace with your email
+    password = ""
+    # Set up the MIME
+    message = MIMEMultipart()
+    message['From'] = from_email
+    message['To'] = to_email
+    message['Subject'] = subject
+    # Attach the body with the msg instance
+    message.attach(MIMEText(body, 'plain'))
+    # Establish a secure session with Gmail's SMTP server
+    try:
+        server = smtplib.SMTP('smtp-relay.brevo.com', 587)  # For Gmail
+        server.starttls()  # Secure connection
+        server.login(from_email, password)  # Log in to your email
+        text = message.as_string()  # Convert the message to string
+        server.sendmail(from_email, to_email, text)  # Send the email
+        server.quit()  # Close the connection
+        return True
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+# Streamlit interface
+st.title('Contact Management CRM')
+
+# Create the right-hand email module in a sidebar
+with st.sidebar:
+    st.header("Email Client")
+    
+    # Email form fields
+    to_email = st.text_input("To (Email Address)")
+    subject = st.text_input("Subject")
+    body = st.text_area("Body")
+    send_button = st.button("Send Email")
+    # Handle the Send button click
+    if send_button and to_email and subject and body:
+        if send_email(to_email, subject, body):
+            st.success("Email sent successfully!")
+        else:
+            st.error("Failed to send email. Please check your credentials.")
+
 # Function to delete a contact by ID
 def delete_contact(contact_id):
     conn = get_db_connection()
