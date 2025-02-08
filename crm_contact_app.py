@@ -79,6 +79,7 @@ with st.form(key='contact_form'):
     if submit_button and name and email and phone and message:
         insert_contact(name, email, phone, message)
         st.success("Contact added successfully!")
+        st.rerun()  # Refresh the app to show the new contact
 
 # Search for existing contacts to update
 st.subheader('Search for Contact to Update')
@@ -102,6 +103,7 @@ if search_name:
                 if update_button and update_name and update_email and update_phone and update_message:
                     update_contact(contact['name'], update_name, update_email, update_phone, update_message)
                     st.success(f"Contact '{contact['name']}' updated successfully!")
+                    st.rerun()  # Refresh the app to show the updated contact
     else:
         st.warning(f"No contact found with the name '{search_name}'.")
 
@@ -120,5 +122,6 @@ if delete_name:
             if delete_button:
                 delete_contact(contact['name'])
                 st.success(f"Contact '{contact['name']}' deleted successfully!")
+                st.rerun()  # Refresh the app to remove the deleted contact
     else:
         st.warning(f"No contact found with the name '{delete_name}'.")
