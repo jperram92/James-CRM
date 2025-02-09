@@ -12,6 +12,7 @@ cursor.execute('DROP TABLE IF EXISTS budgets')
 cursor.execute('DROP TABLE IF EXISTS contacts')
 cursor.execute('DROP TABLE IF EXISTS applications')
 cursor.execute('DROP TABLE IF EXISTS application_documents')
+cursor.execute('DROP TABLE IF EXISTS expenses')
 
 # Create a table for storing contact information if it doesn't already exist
 cursor.execute(''' 
@@ -106,6 +107,23 @@ CREATE TABLE IF NOT EXISTS products (
 )
 ''')
 
+# Add after the products table creation and before the sample data insertions
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    line_item_id INTEGER,
+    product_id INTEGER,
+    amount DECIMAL(10, 2),
+    quantity DECIMAL(10, 2),
+    date_incurred DATE,
+    description TEXT,
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (line_item_id) REFERENCES budget_line_items(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+)
+''')
+
 # Insert some sample (rubbish) data into the contacts table for testing
 cursor.executemany(''' 
 INSERT INTO contacts (title, gender, name, email, phone, message, address_line, suburb, postcode, state, country)
@@ -193,6 +211,17 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
     (9, 'Cloud Computing', 'Infrastructure', 500.00, 'monthly', 'Cloud Services', 'AWS computing resources'),
     (10, 'Project Management Software', 'Tools', 50.00, 'monthly', 'PM Tools', 'Project management software licenses'),
     (11, 'Agile Training Course', 'Training', 1500.00, 'weekly', 'Training Services', 'Team training in Agile methodologies')
+])
+
+# Add some sample expenses
+cursor.executemany('''
+INSERT INTO expenses (line_item_id, product_id, amount, quantity, date_incurred, description)
+VALUES (?, ?, ?, ?, ?, ?)
+''', [
+    (1, 1, 150.00, 8, '2025-01-15', 'January Facebook Ads Management'),
+    (1, 2, 100.00, 5, '2025-01-20', 'January Instagram Content Creation'),
+    (2, 3, 75.00, 10, '2025-01-25', 'Blog Posts - January Batch'),
+    (3, 5, 120.00, 4, '2025-02-01', 'Email Template Design - Q1'),
 ])
 
 # Commit changes and close connection

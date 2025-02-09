@@ -406,6 +406,103 @@ def display_budget_line_items(budget_id, budget_name):
                                 st.success("Product updated successfully!")
                                 st.experimental_rerun()
 
+            # Add Expenses Section
+            st.subheader(f"Expenses for {selected_line_item_for_products}")
+            expenses = get_line_item_expenses(line_item_id)
+            if expenses:
+                expenses_df = pd.DataFrame(expenses)
+                st.dataframe(
+                    expenses_df[[
+                        'date_incurred', 'product_name', 'service_name',
+                        'amount', 'quantity', 'total_amount', 'description'
+                    ]],
+                    column_config={
+                        'date_incurred': 'Date',
+                        'product_name': 'Product',
+                        'service_name': 'Service',
+                        'amount': st.column_config.NumberColumn('Rate', format="%.2f"),
+                        'quantity': st.column_config.NumberColumn('Quantity', format="%.2f"),
+                        'total_amount': st.column_config.NumberColumn('Total', format="%.2f"),
+                        'description': 'Description'
+                    },
+                    hide_index=True
+                )
+                
+                # Show totals
+                totals = calculate_line_item_totals(line_item_id)
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Allocated Budget", f"{currency} {totals['allocated_amount']:,.2f}")
+                with col2:
+                    st.metric("Total Spent", f"{currency} {totals['total_spent']:,.2f}")
+                with col3:
+                    st.metric("Remaining", f"{currency} {totals['remaining']:,.2f}")
+
+# Add after the existing functions
+
+def add_expense(line_item_id, product_id, amount, quantity, date_incurred, description):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Calculate total expense amount
+    total_amount = amount * quantity
+    
+    # Add the expense
+    cursor.execute('''
+    INSERT INTO expenses (line_item_id, product_id, amount, quantity, date_incurred, description)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ''', (line_item_id, product_id, amount, quantity, date_incurred, description))
+    
+    # Update the spent_amount in budget_line_items
+    cursor.execute('''
+    UPDATE budget_line_items 
+    SET spent_amount = COALESCE(spent_amount, 0) + ?
+    WHERE id = ?
+    ''', (total_amount, line_item_id))
+    
+    conn.commit()
+    conn.close()
+
+def get_line_item_expenses(line_item_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            e.id,
+            e.amount,
+            e.quantity,
+            e.amount * e.quantity as total_amount,
+            e.date_incurred,
+            e.description,
+            p.product_name,
+            p.frequency,
+            p.service_name
+        FROM expenses e
+        JOIN products p ON e.product_id = p.id
+        WHERE e.line_item_id = ?
+        ORDER BY e.date_incurred DESC
+    ''', (line_item_id,))
+    expenses = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return expenses
+
+def calculate_line_item_totals(line_item_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            bli.allocated_amount,
+            COALESCE(SUM(e.amount * e.quantity), 0) as total_spent,
+            bli.allocated_amount - COALESCE(SUM(e.amount * e.quantity), 0) as remaining
+        FROM budget_line_items bli
+        LEFT JOIN expenses e ON bli.id = e.line_item_id
+        WHERE bli.id = ?
+        GROUP BY bli.id, bli.allocated_amount
+    ''', (line_item_id,))
+    totals = dict(cursor.fetchone())
+    conn.close()
+    return totals
+
 # Update the manage_budget_line_items function
 def manage_budget_line_items():
     st.title("Budget Line Items Management")
