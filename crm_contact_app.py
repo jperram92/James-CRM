@@ -119,24 +119,6 @@ def display_contacts():
 # Streamlit interface
 st.title('Contact Management CRM')
 
-# Create the right-hand email module in a sidebar
-with st.sidebar:
-    st.header("Email Client")
-    
-    # Email form fields
-    to_email = st.text_input("To (Email Address)")
-    subject = st.text_input("Subject")
-    body = st.text_area("Body")
-
-    send_button = st.button("Send Email")
-
-    # Handle the Send button click
-    if send_button and to_email and subject and body:
-        if send_email(to_email, subject, body):
-            st.success("Email sent successfully!")
-        else:
-            st.error("Failed to send email. Please check your credentials.")
-
 # Get the contacts and convert them to a dataframe for display
 contacts = display_contacts()
 if contacts:
