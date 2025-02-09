@@ -4,6 +4,7 @@ from fpdf import FPDF
 import base64
 from io import BytesIO
 from sqlite3 import Error
+from datetime import datetime
 
 # Function to connect to the database
 def get_db_connection():
@@ -51,31 +52,45 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
     pdf.add_page()
 
     # Set title and header
-    pdf.set_font("Arial", size=16, style='B')
+    pdf.set_font("Arial", size=18, style='B')
     pdf.set_text_color(52, 152, 219)  # Blue color for the header
     pdf.cell(200, 10, txt="Application Form - Document", ln=True, align='C')
+    pdf.ln(10)
 
-    # Add contact info
+    # Add contact info header
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Contact Information", ln=True)
     pdf.set_font("Arial", size=12)
-    pdf.ln(10)
     pdf.set_text_color(0, 0, 0)  # Black text
-    pdf.cell(200, 10, txt=f"Contact Name: {contact_name}", ln=True)
-    pdf.cell(200, 10, txt=f"Contact Email: {contact_email}", ln=True)
-    pdf.cell(200, 10, txt=f"Contact Phone: {contact_phone}", ln=True)
-
-    # Add application info
+    pdf.cell(200, 10, txt=f"Name: {contact_name}", ln=True)
+    pdf.cell(200, 10, txt=f"Email: {contact_email}", ln=True)
+    pdf.cell(200, 10, txt=f"Phone: {contact_phone}", ln=True)
     pdf.ln(10)
+
+    # Add application info header
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Application Information", ln=True)
+    pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt=f"Interest: {interest}", ln=True)
     pdf.cell(200, 10, txt=f"Reason: {reason}", ln=True)
     pdf.multi_cell(200, 10, txt=f"Skillsets: {skillsets}")
+    pdf.ln(10)
 
     # Add document info
-    pdf.ln(10)
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Document Information", ln=True)
+    pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt=f"Document: {document_name}", ln=True)
-
-    # Signature section (can be removed if not needed)
     pdf.ln(10)
-    pdf.cell(200, 10, txt="Signature: ____________________________________")
+
+    # Signature section
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Signature: ____________________________________", ln=True)
+    pdf.ln(10)
+
+    # Timestamp at the bottom of the document
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pdf.cell(200, 10, txt=f"Document generated on: {timestamp}", ln=True)
     pdf.ln(20)
 
     # Create a buffer to store the PDF
