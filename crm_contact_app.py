@@ -72,7 +72,7 @@ def send_email(to_email, subject, body):
         print(f"Error: {e}")
         return False
 # Streamlit interface
-st.title('Contact Management CRM')
+st.title('Contact Management Tool')
 
 # Create the right-hand email module in a sidebar
 with st.sidebar:
@@ -115,9 +115,6 @@ def display_contacts():
     contacts = cursor.fetchall()
     conn.close()
     return contacts
-
-# Streamlit interface
-st.title('Contact Management CRM')
 
 # Get the contacts and convert them to a dataframe for display
 contacts = display_contacts()
@@ -186,7 +183,7 @@ if search_name:
     search_results = search_contact_by_name(search_name)
     if search_results:
         for contact in search_results:
-            st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}, Address: {contact['address_line']}, Suburb: {contact['suburb']}, Postcode: {contact['postcode']}, State: {contact['state']}, Country: {contact['country']}")
+            #st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}, Address: {contact['address_line']}, Suburb: {contact['suburb']}, Postcode: {contact['postcode']}, State: {contact['state']}, Country: {contact['country']}")
 
             # Form to update a contact
             with st.form(key=f'update_form_{contact["id"]}'):
@@ -229,7 +226,7 @@ if delete_name:
     search_results_to_delete = search_contact_by_name(delete_name)
     if search_results_to_delete:
         for contact in search_results_to_delete:
-            st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}")
+            #st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}")
 
             # Give each delete button a unique key based on the contact's ID
             delete_button = st.button(f"Delete {contact['name']}", key=f"delete_{contact['id']}")

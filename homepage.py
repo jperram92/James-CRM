@@ -115,8 +115,8 @@ def home():
     st.image('BusinessTracker.png', use_container_width=False, width=200)  # Resize to 200px (half size)
 
     # Header section
-    st.markdown('<div class="header">Welcome to Your CRM</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Efficient Contact Management System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="header">Welcome to BusinessTracker</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Efficient way to keep a track of your tasks</div>', unsafe_allow_html=True)
 
     # Description of the CRM features with subtle animation
     st.markdown("""
