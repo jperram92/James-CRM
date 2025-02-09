@@ -5,6 +5,8 @@ import base64
 from io import BytesIO
 from datetime import datetime
 from sqlite3 import Error
+from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 
 # Function to connect to the database
 def get_db_connection():
@@ -15,6 +17,58 @@ def get_db_connection():
     except Error as e:
         st.error(f"Error connecting to database: {e}")
         return None
+    
+# Function to save the signature to the database
+def save_signature_to_db(contact_id, signature_image):
+    conn = sqlite3.connect('crm.db')
+    cursor = conn.cursor()
+    
+    # Convert image to bytes and store it in the database
+    with BytesIO() as buffer:
+        signature_image.save(buffer, format="PNG")
+        signature_bytes = buffer.getvalue()
+
+    cursor.execute(''' 
+        UPDATE application_documents
+        SET signature = ?
+        WHERE contact_id = ?
+    ''', (sqlite3.Binary(signature_bytes), contact_id))
+    
+    conn.commit()
+    conn.close()
+    st.success("Signature saved successfully!")
+
+# Function to create the signature canvas
+def draw_signature(contact_id):
+    # Title for the signature page
+    st.title("Draw Your Signature")
+
+    # Display the canvas to draw the signature
+    st.subheader("Use your mouse to draw your signature.")
+    
+    # Create canvas with 500x200 dimensions
+    canvas_result = st_canvas(
+        stroke_width=3,
+        stroke_color="black",
+        background_color="white",
+        height=200,
+        width=500,
+        drawing_mode="freedraw",
+        key="signature_canvas"
+    )
+
+    # After the user finishes drawing the signature
+    if canvas_result.image_data is not None:
+        # Convert the image to PIL format for saving
+        signature_image = Image.fromarray(canvas_result.image_data.astype('uint8'))
+
+        # Button to save the drawn signature
+        if st.button("Save Signature"):
+            # Save the signature to the database
+            save_signature_to_db(contact_id, signature_image)
+            st.image(signature_image, caption="Your Signature", use_column_width=True)
+            # Reset the drawing flag
+            st.session_state.drawing_signature = False
 
 # Function to fetch contact and application details together
 def fetch_contact_with_application(contact_id):
@@ -134,25 +188,31 @@ def generate_and_download_pdf(contact_name, contact_email, contact_phone, docume
     href = f'<a href="data:file/pdf;base64,{b64_pdf}" download="{document_name}.pdf">Download the document</a>'
     st.markdown(href, unsafe_allow_html=True)
 
-# Streamlit interface
+# Function to fetch contacts and display the dropdown menu
 def document_page():
     st.title("Document Generation")
+
+    # Initialize the session state for drawing signature if not already initialized
+    if "drawing_signature" not in st.session_state:
+        st.session_state.drawing_signature = False
 
     # Fetch contacts and display the dropdown menu
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM contacts")
-    contacts = cursor.fetchall()
+    contacts = cursor.fetchall()  # This will return a list of Row objects
+
     conn.close()
 
     # Display a dropdown menu with the list of contacts
     if contacts:
-        contact_names = [f"{contact['name']} ({contact['email']})" for contact in contacts]
+        contact_names = [f"{contact['name']} ({contact['email']})" for contact in contacts]  # Now `contact` is a Row object, so we can use string keys
+
         contact_selection = st.selectbox("Select a contact", contact_names)
 
         # Fetch selected contact details
         selected_contact = contacts[contact_names.index(contact_selection)]
-        contact_id = selected_contact['id']
+        contact_id = selected_contact['id']  # Again, `selected_contact` is a Row object
 
         # Fetch the contact and application details together
         contact_data = fetch_contact_with_application(contact_id)
@@ -174,6 +234,14 @@ def document_page():
             st.write(f"Interest: {interest}")
             st.write(f"Reason: {reason}")
             st.write(f"Skillsets: {skillsets}")
+
+            # Option to draw a signature
+            if st.button("Draw Signature"):
+                st.session_state.drawing_signature = True
+
+            # Only show the signature drawing canvas if the flag is set
+            if st.session_state.drawing_signature:
+                draw_signature(contact_id)
 
             # Button to generate and download PDF
             if st.button("Generate and Download Document"):
