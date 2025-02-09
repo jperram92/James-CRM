@@ -108,9 +108,24 @@ if contact_id:
         
         # Create a dataframe to display budgets
         budgets_df = pd.DataFrame(budgets)
-        # Rename the columns to match the actual database columns
-        budgets_df.columns = ['id', 'contact_id', 'budget_name', 'total_budget', 'current_spent', 
-                             'start_date', 'end_date', 'currency', 'status', 'created_at']
+        
+        # First, let's check what columns we actually have
+        #st.write("Debug: Available columns", budgets_df.columns)
+        
+        # Update the columns based on what's actually in the database
+        column_mapping = {
+            0: 'id',
+            1: 'contact_id',
+            2: 'budget_name',
+            3: 'total_budget',
+            4: 'current_spent',
+            5: 'start_date',
+            6: 'end_date',
+            7: 'currency',
+            8: 'status'
+        }
+        
+        budgets_df.rename(columns=column_mapping, inplace=True)
         
         # Select only the columns we want to display
         display_columns = ['id', 'budget_name', 'total_budget', 'current_spent', 

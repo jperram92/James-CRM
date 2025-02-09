@@ -1,11 +1,9 @@
 import streamlit as st
 
-# Homepage layout design using Streamlit with white text and no box
 def home():
-    # Set the page config to make the homepage look modern
     st.set_page_config(page_title="CRM - Home", page_icon=":house:", layout="wide")
-
-    # Add custom styles with CSS for white text and no box
+    
+    # Add custom styles with CSS including sidebar styling
     st.markdown("""
         <style>
             body {
@@ -108,40 +106,90 @@ def home():
                     transform: scale(1);
                 }
             }
+
+            /* New sidebar styling */
+            .sidebar {
+                background-color: #2c3e50;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 10px;
+            }
+
+            .nav-link {
+                display: block;
+                padding: 10px 15px;
+                color: white;
+                text-decoration: none;
+                font-size: 16px;
+                margin: 5px 0;
+                border-radius: 5px;
+                transition: background-color 0.3s;
+            }
+
+            .nav-link:hover {
+                background-color: #3498db;
+                color: white;
+            }
+
+            .nav-header {
+                color: #3498db;
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                text-align: center;
+            }
         </style>
     """, unsafe_allow_html=True)
 
-    # Add the logo to the top right (use_container_width instead of deprecated use_column_width)
-    st.image('BusinessTracker.png', use_container_width=False, width=200)  # Resize to 200px (half size)
+    # Create two columns: sidebar and main content
+    col1, col2 = st.columns([1, 4])
 
-    # Header section
-    st.markdown('<div class="header">Welcome to BusinessTracker</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Efficient way to keep a track of your tasks</div>', unsafe_allow_html=True)
+    # Sidebar Navigation
+    #with col1:
+        #st.sidebar.title("Navigation")
+        
+        # Only keep the homepage link until other pages are created
+        #st.sidebar.page_link("homepage.py", label="🏠 Home")
 
-    # Description of the CRM features with subtle animation
-    st.markdown("""
-        <div class="content">
-            Welcome to the CRM system, designed to simplify the process of managing and interacting with your contacts. This platform allows you to:
-        </div>
-    """, unsafe_allow_html=True)
+        # Comment out these links until the pages are created
+        # st.sidebar.page_link("pages/1_application_form.py", label="📝 Application Form")
+        # st.sidebar.page_link("pages/2_budget_line_items.py", label="💰 Budget Line Items")
+        # st.sidebar.page_link("pages/3_budgets.py", label="📊 Budgets")
+        # st.sidebar.page_link("pages/4_crm_contact.py", label="👥 CRM Contacts")
+        # st.sidebar.page_link("pages/5_document_generation.py", label="📄 Document Generation")
 
-    # Box for the description without bullet points, text centered
-    st.markdown("""
-        <div class="box">
-            <p>Add, update, and delete contacts</p>
-            <p>Search contacts by name</p>
-            <p>Send personalized emails to clients</p>
-            <p>Maintain and organize customer data for better service</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # Main content
+    with col2:
+        # Add the logo to the top right
+        st.image('BusinessTracker.png', use_container_width=False, width=200)
 
-    # Call to Action button with animation
-    st.markdown(""" 
-        <div style="text-align:center;">
-            <a href="http://localhost:8501" class="button" style="color: white;">Manage Applications</a>
-        </div>
-    """, unsafe_allow_html=True)
+        # Header section
+        st.markdown('<div class="header">Welcome to BusinessTracker</div>', unsafe_allow_html=True)
+        st.markdown('<div class="subtitle">Efficient way to keep a track of your tasks</div>', unsafe_allow_html=True)
 
-# Run the homepage function
+        # Description of the CRM features
+        st.markdown("""
+            <div class="content">
+                Welcome to the CRM system, designed to simplify the process of managing and interacting with your contacts. This platform allows you to:
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Box for the description
+        st.markdown("""
+            <div class="box">
+                <p>Add, update, and delete contacts</p>
+                <p>Search contacts by name</p>
+                <p>Send personalized emails to clients</p>
+                <p>Maintain and organize customer data for better service</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Call to Action button
+        st.markdown(""" 
+            <div style="text-align:center;">
+                <a href="http://localhost:8501" class="button" style="color: white;">Manage Applications</a>
+            </div>
+        """, unsafe_allow_html=True)
+
 if __name__ == "__main__":
     home()
