@@ -237,7 +237,7 @@ def document_page():
 
     # Display a dropdown menu with the list of contacts
     if contacts:
-        contact_names = [f"{contact[1]} ({contact[2]})" for contact in contacts]  # contact[1] is name and contact[2] is email
+        contact_names = [contact[3] for contact in contacts]  # contact[3] is name in the database index.
 
         contact_selection = st.selectbox("Select a contact", contact_names)
 
