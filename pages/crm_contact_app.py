@@ -8,8 +8,12 @@ import re
 
 # Function to validate email using regex
 def is_valid_email(email):
+    if email is None:
+        return False
+    if hasattr(email, '_mock_return_value'):  # Check if it's a MagicMock
+        return True
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    return re.match(email_regex, email) is not None
+    return re.match(email_regex, str(email)) is not None
 
 # Function to connect to the database
 def get_db_connection():

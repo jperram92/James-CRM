@@ -1,0 +1,16 @@
+{
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests",
+        "-v",
+        "--capture=no",
+        "--cov=pages",
+        "--cov-report=html"
+    ],
+    "python.analysis.extraPaths": [
+        ".",
+        "tests"
+    ]
+}
