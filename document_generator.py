@@ -29,15 +29,18 @@ def save_signature_to_db(contact_id, signature_image):
         signature_image.save(buffer, format="PNG")
         signature_bytes = buffer.getvalue()
 
+    # Get the current timestamp when the signature is applied
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     cursor.execute(''' 
         UPDATE application_documents
-        SET signature = ?
+        SET signature = ?, timestamp = ?
         WHERE contact_id = ?
-    ''', (sqlite3.Binary(signature_bytes), contact_id))
+    ''', (sqlite3.Binary(signature_bytes), timestamp, contact_id))
     
     conn.commit()
     conn.close()
-    st.success("Signature saved successfully!")
+    st.success(f"Signature saved successfully! Applied on {timestamp}")
 
 # Function to create the signature canvas
 def draw_signature(contact_id):
@@ -70,6 +73,26 @@ def draw_signature(contact_id):
             st.image(signature_image, caption="Your Signature", use_column_width=True)
             # Reset the drawing flag
             st.session_state.drawing_signature = False
+
+# Function to fetch signature and timestamp from the database
+def fetch_signature_and_timestamp_from_db(contact_id):
+    conn = sqlite3.connect('crm.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT signature, timestamp
+        FROM application_documents
+        WHERE contact_id = ?
+    ''', (contact_id,))
+    
+    result = cursor.fetchone()
+    conn.close()
+
+    if result and result[0]:
+        signature_image = BytesIO(result[0])  # Convert the binary data into BytesIO object for FPDF
+        timestamp = result[1]  # The timestamp when the signature was applied
+        return signature_image, timestamp
+    return None, None
+
 # Function to fetch signature from the database
 def fetch_signature_from_db(contact_id):
     conn = sqlite3.connect('crm.db')
@@ -119,7 +142,7 @@ def fetch_contact_with_application(contact_id):
     return None
 
 # Function to create a form-like document with the signature next to the header
-def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image=None):
+def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image=None, timestamp=None):
     pdf = FPDF()
     pdf.add_page()
 
@@ -195,9 +218,15 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
 
     pdf.ln(30)  # Space after signature
 
+    # If timestamp is provided, add it to the document
+    if timestamp:
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt=f"Signature applied on: {timestamp}", ln=True)
+        pdf.ln(10)
+
     # Timestamp at the bottom of the document
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    pdf.cell(200, 10, txt=f"Document generated on: {timestamp}", ln=True)
+    pdf.cell(200, 10, txt=f"Document signed on: {timestamp}", ln=True)
     pdf.ln(20)
 
     # Create a buffer to store the PDF
@@ -209,6 +238,9 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
 
 # Function to provide the PDF download link
 def generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, contact_id, signature_image):
+
+    # Fetch the signature image and timestamp from the database
+    signature_image, timestamp = fetch_signature_and_timestamp_from_db(contact_id)
 
     # Create the document
     pdf_output = create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image)
