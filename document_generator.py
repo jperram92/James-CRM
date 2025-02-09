@@ -3,7 +3,7 @@ import sqlite3
 from fpdf import FPDF
 import base64
 from io import BytesIO
-from sqlite3 import Error  # Add this import for Error handling
+from sqlite3 import Error
 
 # Function to connect to the database
 def get_db_connection():
@@ -15,36 +15,45 @@ def get_db_connection():
         st.error(f"Error connecting to database: {e}")
         return None
 
-# Function to fetch contacts from the database
-def fetch_contacts():
+# Function to fetch contact and application details together
+def fetch_contact_with_application(contact_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM contacts")
-    contacts = cursor.fetchall()
-    conn.close()
-    return contacts
 
-# Function to insert document data into the database
-def insert_document(contact_id, document_name, document_path, signature):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(''' 
-        INSERT INTO application_documents (contact_id, document_name, document_path, signature)
-        VALUES (?, ?, ?, ?)
-    ''', (contact_id, document_name, document_path, signature))
-    conn.commit()
+    # Query to join contact data with application data
+    cursor.execute('''
+        SELECT c.id, c.name, c.email, c.phone, a.interest, a.reason, a.skillsets, d.document_name
+        FROM contacts c
+        JOIN applications a ON c.id = a.contact_id
+        LEFT JOIN application_documents d ON c.id = d.contact_id
+        WHERE c.id = ?
+    ''', (contact_id,))
+    contact_data = cursor.fetchone()
     conn.close()
+
+    # Check if contact data is found
+    if contact_data:
+        return {
+            "id": contact_data["id"],
+            "name": contact_data["name"],
+            "email": contact_data["email"],
+            "phone": contact_data["phone"],
+            "interest": contact_data["interest"],
+            "reason": contact_data["reason"],
+            "skillsets": contact_data["skillsets"],
+            "document_name": contact_data["document_name"]
+        }
+    return None
 
 # Function to create a document in a blue professional format
-def create_document(contact_id, contact_name, contact_email, contact_phone):
-    # Create PDF document with fpdf
+def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets):
     pdf = FPDF()
     pdf.add_page()
 
     # Set title and header
     pdf.set_font("Arial", size=16, style='B')
     pdf.set_text_color(52, 152, 219)  # Blue color for the header
-    pdf.cell(200, 10, txt="Application Form - Signed Document", ln=True, align='C')
+    pdf.cell(200, 10, txt="Application Form - Document", ln=True, align='C')
 
     # Add contact info
     pdf.set_font("Arial", size=12)
@@ -54,81 +63,49 @@ def create_document(contact_id, contact_name, contact_email, contact_phone):
     pdf.cell(200, 10, txt=f"Contact Email: {contact_email}", ln=True)
     pdf.cell(200, 10, txt=f"Contact Phone: {contact_phone}", ln=True)
 
-    # Add document content
+    # Add application info
     pdf.ln(10)
-    pdf.multi_cell(200, 10, txt="This is a generated document for application submission. Please review the content below and provide your signature in the designated area.")
+    pdf.cell(200, 10, txt=f"Interest: {interest}", ln=True)
+    pdf.cell(200, 10, txt=f"Reason: {reason}", ln=True)
+    pdf.multi_cell(200, 10, txt=f"Skillsets: {skillsets}")
 
-    # Signature section
+    # Add document info
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Document: {document_name}", ln=True)
+
+    # Signature section (can be removed if not needed)
     pdf.ln(10)
     pdf.cell(200, 10, txt="Signature: ____________________________________")
     pdf.ln(20)
 
     # Create a buffer to store the PDF
     pdf_output = BytesIO()
-
-    # Manually write to the buffer instead of using pdf.output(pdf_output)
-    # Convert the PDF content into bytes and write to the buffer
-    pdf_output.write(pdf.output(dest='S').encode('latin1'))  # 'S' writes the content to memory
+    pdf_output.write(pdf.output(dest='S').encode('latin1'))  # Write to memory buffer
     pdf_output.seek(0)  # Reset the buffer pointer to the beginning of the file
 
     return pdf_output
 
-# Function to allow the user to sign the document
-def capture_signature():
-    st.subheader("Please sign the document below")
-    signature = st.text_area("Type your signature:", "")
-    
-    if st.button("Submit Signature"):
-        return signature
-    return None
+# Function to provide the PDF download link
+def generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets):
+    # Create the document
+    pdf_output = create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets)
 
-def generate_and_store_document(contact_id, contact_name, contact_email, contact_phone):
-    # Trim any leading/trailing spaces from the input fields, but don't strip contact_id since it's an integer
-    contact_name = contact_name.strip() if contact_name else ""
-    contact_email = contact_email.strip() if contact_email else ""
-    contact_phone = contact_phone.strip() if contact_phone else ""
-    
-    # Validate contact details - Check if any field is empty
-    if not contact_name or not contact_email or not contact_phone:
-        st.error("Please fill in all the contact details.")
-        return
-    
-    # Generate the document
-    pdf_output = create_document(contact_id, contact_name, contact_email, contact_phone)
-    
-    # Capture the signature
-    signature = capture_signature()
-    
-    if signature:
-        # Save the document with the signature
-        document_name = f"application_form_{contact_id}.pdf"
-        document_path = f"/path/to/store/{document_name}"
-        
-        # Insert the document data into the database
-        insert_document(contact_id, document_name, document_path, signature)
-        
-        # Display success message
-        st.success("Document generated and signature saved successfully!")
-
-        # Show the signature for verification
-        st.write(f"Captured Signature: {signature}")
-
-        # Optionally, you can save the PDF to a file system
-        with open(document_path, "wb") as f:
-            f.write(pdf_output.read())
-        
-        # Return PDF for download
-        pdf_output.seek(0)
-        b64_pdf = base64.b64encode(pdf_output.read()).decode('utf-8')
-        href = f'<a href="data:file/pdf;base64,{b64_pdf}" download="document.pdf">Download the document</a>'
-        st.markdown(href, unsafe_allow_html=True)
+    # Provide PDF download link
+    pdf_output.seek(0)
+    b64_pdf = base64.b64encode(pdf_output.read()).decode('utf-8')
+    href = f'<a href="data:file/pdf;base64,{b64_pdf}" download="{document_name}.pdf">Download the document</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 # Streamlit interface
 def document_page():
-    st.title("Document Generation and Signature")
+    st.title("Document Generation")
 
-    # Fetch contacts from the database
-    contacts = fetch_contacts()
+    # Fetch contacts and display the dropdown menu
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM contacts")
+    contacts = cursor.fetchall()
+    conn.close()
 
     # Display a dropdown menu with the list of contacts
     if contacts:
@@ -138,19 +115,33 @@ def document_page():
         # Fetch selected contact details
         selected_contact = contacts[contact_names.index(contact_selection)]
         contact_id = selected_contact['id']
-        contact_name = selected_contact['name']
-        contact_email = selected_contact['email']
-        contact_phone = selected_contact['phone']
 
-        # Display the contact information
-        st.write(f"Contact ID: {contact_id}")
-        st.write(f"Contact Name: {contact_name}")
-        st.write(f"Contact Email: {contact_email}")
-        st.write(f"Contact Phone: {contact_phone}")
+        # Fetch the contact and application details together
+        contact_data = fetch_contact_with_application(contact_id)
 
-        # Generate document button
-        if st.button("Generate Document"):
-            generate_and_store_document(contact_id, contact_name, contact_email, contact_phone)
+        if contact_data:
+            contact_name = contact_data["name"]
+            contact_email = contact_data["email"]
+            contact_phone = contact_data["phone"]
+            interest = contact_data["interest"]
+            reason = contact_data["reason"]
+            skillsets = contact_data["skillsets"]
+            document_name = contact_data["document_name"]
+
+            # Display the contact information
+            st.write(f"Contact ID: {contact_id}")
+            st.write(f"Contact Name: {contact_name}")
+            st.write(f"Contact Email: {contact_email}")
+            st.write(f"Contact Phone: {contact_phone}")
+            st.write(f"Interest: {interest}")
+            st.write(f"Reason: {reason}")
+            st.write(f"Skillsets: {skillsets}")
+
+            # Button to generate and download PDF
+            if st.button("Generate and Download Document"):
+                generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets)
+        else:
+            st.write("No data found for this contact.")
     else:
         st.write("No contacts found in the database.")
 
