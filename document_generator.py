@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlite3 import Error
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
+import tempfile
 
 # Function to connect to the database
 def get_db_connection():
@@ -69,6 +70,23 @@ def draw_signature(contact_id):
             st.image(signature_image, caption="Your Signature", use_column_width=True)
             # Reset the drawing flag
             st.session_state.drawing_signature = False
+# Function to fetch signature from the database
+def fetch_signature_from_db(contact_id):
+    conn = sqlite3.connect('crm.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT signature
+        FROM application_documents
+        WHERE contact_id = ?
+    ''', (contact_id,))
+    
+    signature = cursor.fetchone()
+    conn.close()
+
+    if signature and signature[0]:
+        signature_image = BytesIO(signature[0])  # Convert the binary data into BytesIO object for FPDF
+        return signature_image
+    return None
 
 # Function to fetch contact and application details together
 def fetch_contact_with_application(contact_id):
@@ -100,8 +118,8 @@ def fetch_contact_with_application(contact_id):
         }
     return None
 
-# Function to create a form-like document
-def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets):
+# Function to create a form-like document with the signature next to the header
+def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image=None):
     pdf = FPDF()
     pdf.add_page()
 
@@ -160,10 +178,22 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
     pdf.cell(200, 10, txt=f"Document: {document_name}", ln=True)
     pdf.ln(10)
 
-    # Signature section
+    # Signature section: place the signature image next to the header
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Signature: ____________________________________", ln=True)
-    pdf.ln(10)
+    pdf.cell(140, 10, txt="Signature:", ln=True)
+
+    # If signature_image is provided, place it next to the signature text
+    if signature_image:
+        # Save the BytesIO signature image to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+            signature_image.seek(0)  # Rewind the image to the start
+            temp_file.write(signature_image.read())  # Save to temp file
+            temp_file_path = temp_file.name  # Get the path of the temporary file
+
+        # Now add the image to the PDF
+        pdf.image(temp_file_path, x=30, y=pdf.get_y(), w=40, h=20)  # Adjust the x, y position as needed
+
+    pdf.ln(30)  # Space after signature
 
     # Timestamp at the bottom of the document
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -178,9 +208,10 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
     return pdf_output
 
 # Function to provide the PDF download link
-def generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets):
+def generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, contact_id, signature_image):
+
     # Create the document
-    pdf_output = create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets)
+    pdf_output = create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image)
 
     # Provide PDF download link
     pdf_output.seek(0)
@@ -206,13 +237,13 @@ def document_page():
 
     # Display a dropdown menu with the list of contacts
     if contacts:
-        contact_names = [f"{contact['name']} ({contact['email']})" for contact in contacts]  # Now `contact` is a Row object, so we can use string keys
+        contact_names = [f"{contact[1]} ({contact[2]})" for contact in contacts]  # contact[1] is name and contact[2] is email
 
         contact_selection = st.selectbox("Select a contact", contact_names)
 
         # Fetch selected contact details
         selected_contact = contacts[contact_names.index(contact_selection)]
-        contact_id = selected_contact['id']  # Again, `selected_contact` is a Row object
+        contact_id = selected_contact[0]  # Assuming contact[0] is the contact_id
 
         # Fetch the contact and application details together
         contact_data = fetch_contact_with_application(contact_id)
@@ -243,9 +274,12 @@ def document_page():
             if st.session_state.drawing_signature:
                 draw_signature(contact_id)
 
+            # Fetch signature from the database and pass to PDF generation
+            signature_image = fetch_signature_from_db(contact_id)
+
             # Button to generate and download PDF
             if st.button("Generate and Download Document"):
-                generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets)
+                generate_and_download_pdf(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, contact_id, signature_image)
         else:
             st.write("No data found for this contact.")
     else:
