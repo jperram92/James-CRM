@@ -1,16 +1,17 @@
 import sqlite3
+from datetime import datetime, date
 
-# Create a connection to the SQLite database (it will create the file if it doesn't exist)
+# Create a connection to the SQLite database
 conn = sqlite3.connect('crm.db')
-
-# Create a cursor object to interact with the database
 cursor = conn.cursor()
 
-# Drop the tables if they exist (use with caution - this will delete data)
+# Drop existing tables
+cursor.execute('DROP TABLE IF EXISTS products')
+cursor.execute('DROP TABLE IF EXISTS budget_line_items')
+cursor.execute('DROP TABLE IF EXISTS budgets')
 cursor.execute('DROP TABLE IF EXISTS contacts')
 cursor.execute('DROP TABLE IF EXISTS applications')
 cursor.execute('DROP TABLE IF EXISTS application_documents')
-cursor.execute('DROP TABLE IF EXISTS budgets')  # Drop budgets table if it exists
 
 # Create a table for storing contact information if it doesn't already exist
 cursor.execute(''' 
@@ -68,7 +69,40 @@ CREATE TABLE IF NOT EXISTS budgets (
     end_date DATE,
     currency TEXT,
     status TEXT DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
+)
+''')
+
+# Create budget line items table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS budget_line_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    budget_id INTEGER,
+    line_item_name TEXT NOT NULL,
+    allocated_amount DECIMAL(10, 2),
+    spent_amount DECIMAL(10, 2) DEFAULT 0.00,
+    remaining_amount AS (allocated_amount - spent_amount),
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+)
+''')
+
+# Create products table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    line_item_id INTEGER,
+    product_name TEXT NOT NULL,
+    product_group TEXT,
+    rate DECIMAL(10, 2),
+    frequency TEXT CHECK(frequency IN ('hourly', 'daily', 'weekly', 'monthly', 'yearly')),
+    service_name TEXT,
+    description TEXT,
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (line_item_id) REFERENCES budget_line_items(id)
 )
 ''')
 
@@ -120,7 +154,48 @@ VALUES (?, ?, ?, ?, ?, ?)
     (4, 'Project Management', 40000.00, '2025-04-01', '2025-09-30', 'AUD')
 ])
 
-# Commit the changes and close the connection
+# Insert sample budget line items
+cursor.executemany('''
+INSERT INTO budget_line_items (budget_id, line_item_name, allocated_amount)
+VALUES (?, ?, ?)
+''', [
+    (1, 'Social Media Marketing', 20000.00),
+    (1, 'Content Creation', 15000.00),
+    (1, 'Email Campaigns', 15000.00),
+    (2, 'Website Development', 6000.00),
+    (2, 'UI/UX Design', 4000.00),
+    (3, 'Frontend Development', 15000.00),
+    (3, 'Backend Development', 10000.00),
+    (4, 'Research Personnel', 20000.00),
+    (4, 'Computing Resources', 10000.00),
+    (5, 'Project Tools', 15000.00),
+    (5, 'Team Training', 25000.00)
+])
+
+# Insert sample products
+cursor.executemany('''
+INSERT INTO products (
+    line_item_id, product_name, product_group, rate, 
+    frequency, service_name, description
+)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+''', [
+    (1, 'Facebook Ads Management', 'Digital Marketing', 150.00, 'hourly', 'Social Media', 'Managing Facebook ad campaigns'),
+    (1, 'Instagram Content', 'Digital Marketing', 100.00, 'hourly', 'Social Media', 'Creating and scheduling Instagram posts'),
+    (2, 'Blog Writing', 'Content', 75.00, 'hourly', 'Content Creation', 'Writing blog posts and articles'),
+    (2, 'Video Production', 'Content', 200.00, 'hourly', 'Content Creation', 'Creating promotional videos'),
+    (3, 'Email Template Design', 'Digital Marketing', 120.00, 'hourly', 'Email Marketing', 'Designing email templates'),
+    (4, 'WordPress Development', 'Development', 90.00, 'hourly', 'Web Development', 'Custom WordPress development'),
+    (5, 'UI Design Package', 'Design', 2000.00, 'weekly', 'Design Services', 'Complete UI design package'),
+    (6, 'React Development', 'Development', 110.00, 'hourly', 'Web Development', 'Frontend development using React'),
+    (7, 'API Development', 'Development', 130.00, 'hourly', 'Web Development', 'Building REST APIs'),
+    (8, 'Data Scientist', 'Research', 150.00, 'hourly', 'AI Research', 'AI/ML research and development'),
+    (9, 'Cloud Computing', 'Infrastructure', 500.00, 'monthly', 'Cloud Services', 'AWS computing resources'),
+    (10, 'Project Management Software', 'Tools', 50.00, 'monthly', 'PM Tools', 'Project management software licenses'),
+    (11, 'Agile Training Course', 'Training', 1500.00, 'weekly', 'Training Services', 'Team training in Agile methodologies')
+])
+
+# Commit changes and close connection
 conn.commit()
 conn.close()
 
