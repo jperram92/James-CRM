@@ -127,6 +127,19 @@ if contacts:
 else:
     st.write("No contacts available.")
 
+# Mapping of full state names to abbreviations (and vice versa)
+state_mapping = {
+    "New South Wales": "NSW",
+    "Victoria": "VIC",
+    "Queensland": "QLD",
+    "South Australia": "SA",
+    "Western Australia": "WA",
+    "Tasmania": "TAS",
+    "Australian Capital Territory": "ACT",
+    "Northern Territory": "NT",
+    "Jervis Bay Territory": "JBT"
+}
+
 # Contact form to add a new contact
 st.subheader('Add New Contact')
 with st.form(key='contact_form'):
@@ -185,25 +198,30 @@ if search_name:
         for contact in search_results:
             #st.write(f"ID: {contact['id']}, Name: {contact['name']}, Email: {contact['email']}, Phone: {contact['phone']}, Message: {contact['message']}, Address: {contact['address_line']}, Suburb: {contact['suburb']}, Postcode: {contact['postcode']}, State: {contact['state']}, Country: {contact['country']}")
 
-            # Form to update a contact
+            # Update the update contact form to handle state correctly
             with st.form(key=f'update_form_{contact["id"]}'):
+                # Title picklist
                 update_title = st.selectbox("Update Title", ["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."], index=["Mr.", "Ms.", "Mrs.", "Dr.", "Prof."].index(contact['title']))
+                # Gender picklist
                 update_gender = st.selectbox("Update Gender", ["Male", "Female", "Non-binary", "Prefer not to say"], index=["Male", "Female", "Non-binary", "Prefer not to say"].index(contact['gender']))
+                # Name input
                 update_name = st.text_input("Update Name", value=contact['name'])
+                # Email input
                 update_email = st.text_input("Update Email", value=contact['email'])
                 update_phone = st.text_input("Update Phone", value=contact['phone'])
                 update_message = st.text_area("Update Message", value=contact['message'])
                 update_address_line = st.text_input("Update Address Line", value=contact['address_line'])
                 update_suburb = st.text_input("Update Suburb", value=contact['suburb'])
                 update_postcode = st.text_input("Update Postcode", value=contact['postcode'])
-                update_state = st.selectbox("Update State", [
-                    "New South Wales", "Victoria", "Queensland", "South Australia", 
-                    "Western Australia", "Tasmania", "Australian Capital Territory", 
-                    "Northern Territory", "Jervis Bay Territory"], index=["New South Wales", "Victoria", "Queensland", "South Australia", 
-                    "Western Australia", "Tasmania", "Australian Capital Territory", 
-                    "Northern Territory", "Jervis Bay Territory"].index(contact['state']))
+
+                # For the state dropdown, use the mapping to find the correct index
+                state_abbreviation = state_mapping.get(contact['state'], None)
+                update_state = st.selectbox("Update State", list(state_mapping.keys()), index=list(state_mapping.values()).index(state_abbreviation) if state_abbreviation else 0)
+
+                # Country input (auto-fill with Australia for consistency)
                 update_country = st.text_input("Update Country", value=contact['country'], disabled=True)
 
+                # Add the submit button for the form
                 update_button = st.form_submit_button(label="Update Contact")
 
                 if update_button:
@@ -215,8 +233,6 @@ if search_name:
                         if update_contact(contact['id'], update_title, update_gender, update_name, update_email, update_phone, update_message, update_address_line, update_suburb, update_postcode, update_state, update_country):
                             st.success(f"Contact '{contact['name']}' updated successfully!")
                             st.rerun()  # Refresh the app to show the updated contact
-    else:
-        st.warning(f"No contact found with the name '{search_name}'.")
 
 # Search for existing contacts to delete
 st.subheader('Search for Contact to Delete')
