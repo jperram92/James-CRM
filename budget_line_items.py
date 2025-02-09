@@ -182,11 +182,13 @@ def get_budget_details(budget_id):
             b.total_budget,
             b.currency,
             COALESCE(SUM(bli.allocated_amount), 0) as total_allocated,
+            COALESCE(SUM(e.amount * e.quantity), 0) as total_spent,
             b.total_budget - COALESCE(SUM(bli.allocated_amount), 0) as remaining_budget
         FROM budgets b
         LEFT JOIN budget_line_items bli ON b.id = bli.budget_id
+        LEFT JOIN expenses e ON bli.id = e.line_item_id
         WHERE b.id = ?
-        GROUP BY b.id
+        GROUP BY b.id, b.budget_name, b.total_budget, b.currency
     ''', (budget_id,))
     budget = dict(cursor.fetchone())
     conn.close()
@@ -603,10 +605,11 @@ def manage_budget_line_items():
                     budget_id = budget['id']
                     break
 
+            # Update the metrics display section in manage_budget_line_items
             if budget_id:
                 # Display budget summary
                 budget_details = get_budget_details(budget_id)
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
                     st.metric(
@@ -622,7 +625,13 @@ def manage_budget_line_items():
                 
                 with col3:
                     st.metric(
-                        "Remaining Budget", 
+                        "Total Spent", 
+                        f"{budget_details['currency']} {budget_details['total_spent']:,.2f}"
+                    )
+                
+                with col4:
+                    st.metric(
+                        "Available to Allocate", 
                         f"{budget_details['currency']} {budget_details['remaining_budget']:,.2f}"
                     )
 
