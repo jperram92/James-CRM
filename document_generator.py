@@ -3,8 +3,8 @@ import sqlite3
 from fpdf import FPDF
 import base64
 from io import BytesIO
-from sqlite3 import Error
 from datetime import datetime
+from sqlite3 import Error
 
 # Function to connect to the database
 def get_db_connection():
@@ -22,12 +22,12 @@ def fetch_contact_with_application(contact_id):
     cursor = conn.cursor()
 
     # Query to join contact data with application data
-    cursor.execute('''
-        SELECT c.id, c.name, c.email, c.phone, a.interest, a.reason, a.skillsets, d.document_name
-        FROM contacts c
-        JOIN applications a ON c.id = a.contact_id
-        LEFT JOIN application_documents d ON c.id = d.contact_id
-        WHERE c.id = ?
+    cursor.execute(''' 
+        SELECT c.id, c.name, c.email, c.phone, a.interest, a.reason, a.skillsets, d.document_name 
+        FROM contacts c 
+        JOIN applications a ON c.id = a.contact_id 
+        LEFT JOIN application_documents d ON c.id = d.contact_id 
+        WHERE c.id = ? 
     ''', (contact_id,))
     contact_data = cursor.fetchone()
     conn.close()
@@ -46,7 +46,7 @@ def fetch_contact_with_application(contact_id):
         }
     return None
 
-# Function to create a document in a blue professional format
+# Function to create a form-like document
 def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets):
     pdf = FPDF()
     pdf.add_page()
@@ -54,29 +54,52 @@ def create_document(contact_name, contact_email, contact_phone, document_name, i
     # Set title and header
     pdf.set_font("Arial", size=18, style='B')
     pdf.set_text_color(52, 152, 219)  # Blue color for the header
-    pdf.cell(200, 10, txt="Application Form - Document", ln=True, align='C')
+    pdf.cell(200, 10, txt="Job Application Form", ln=True, align='C')
     pdf.ln(10)
 
-    # Add contact info header
+    # Add form fields section
     pdf.set_font("Arial", size=14, style='B')
-    pdf.cell(200, 10, txt="Contact Information", ln=True)
+    pdf.cell(200, 10, txt="Position Applied For:", ln=True)
     pdf.set_font("Arial", size=12)
-    pdf.set_text_color(0, 0, 0)  # Black text
-    pdf.cell(200, 10, txt=f"Name: {contact_name}", ln=True)
-    pdf.cell(200, 10, txt=f"Email: {contact_email}", ln=True)
-    pdf.cell(200, 10, txt=f"Phone: {contact_phone}", ln=True)
-    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"{interest}", ln=True)
+    pdf.ln(5)
 
-    # Add application info header
+    # Name field (First and Last)
     pdf.set_font("Arial", size=14, style='B')
-    pdf.cell(200, 10, txt="Application Information", ln=True)
+    pdf.cell(200, 10, txt="Name:", ln=True)
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt=f"Interest: {interest}", ln=True)
-    pdf.cell(200, 10, txt=f"Reason: {reason}", ln=True)
-    pdf.multi_cell(200, 10, txt=f"Skillsets: {skillsets}")
+    pdf.cell(200, 10, txt=f"{contact_name}", ln=True)
+    pdf.ln(5)
+
+    # Email field
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Email:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"{contact_email}", ln=True)
+    pdf.ln(5)
+
+    # Phone field
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Phone Number:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"{contact_phone}", ln=True)
+    pdf.ln(5)
+
+    # Reason field
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Reason for Application:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(200, 10, txt=f"{reason}")
+    pdf.ln(5)
+
+    # Skillsets field
+    pdf.set_font("Arial", size=14, style='B')
+    pdf.cell(200, 10, txt="Skillsets:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(200, 10, txt=f"{skillsets}")
     pdf.ln(10)
 
-    # Add document info
+    # Document info
     pdf.set_font("Arial", size=14, style='B')
     pdf.cell(200, 10, txt="Document Information", ln=True)
     pdf.set_font("Arial", size=12)
