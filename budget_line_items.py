@@ -41,12 +41,14 @@ def get_budget_line_items(budget_id):
             bli.id,
             bli.line_item_name,
             bli.allocated_amount,
-            bli.spent_amount,
+            COALESCE(SUM(e.amount * e.quantity), 0) as spent_amount,
             bli.status,
             b.currency
         FROM budget_line_items bli
         JOIN budgets b ON b.id = bli.budget_id
+        LEFT JOIN expenses e ON bli.id = e.line_item_id
         WHERE bli.budget_id = ?
+        GROUP BY bli.id, bli.line_item_name, bli.allocated_amount, bli.status, b.currency
     ''', (budget_id,))
     line_items = [dict(row) for row in cursor.fetchall()]
     conn.close()
