@@ -152,7 +152,7 @@ def delete_product(product_id):
     conn.close()
 
 # Function to validate budget allocation
-def validate_budget_allocation(budget_id, new_allocation):
+def validate_budget_allocation(budget_id, new_allocation, line_item_id=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -160,15 +160,23 @@ def validate_budget_allocation(budget_id, new_allocation):
     cursor.execute('SELECT total_budget FROM budgets WHERE id = ?', (budget_id,))
     total_budget = cursor.fetchone()['total_budget']
     
-    # Get sum of existing allocations
-    cursor.execute('''
-        SELECT SUM(allocated_amount) as total_allocated 
-        FROM budget_line_items 
-        WHERE budget_id = ?
-    ''', (budget_id,))
-    current_total = cursor.fetchone()['total_allocated'] or 0
+    # Get sum of existing allocations, excluding the current line item if updating
+    if line_item_id:
+        cursor.execute('''
+            SELECT SUM(allocated_amount) as total_allocated 
+            FROM budget_line_items 
+            WHERE budget_id = ? AND id != ?
+        ''', (budget_id, line_item_id))
+    else:
+        cursor.execute('''
+            SELECT SUM(allocated_amount) as total_allocated 
+            FROM budget_line_items 
+            WHERE budget_id = ?
+        ''', (budget_id,))
     
+    current_total = cursor.fetchone()['total_allocated'] or 0
     conn.close()
+    
     return (current_total + new_allocation) <= total_budget
 
 # Add new function to get budget details
@@ -176,20 +184,38 @@ def get_budget_details(budget_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
+        WITH budget_summary AS (
+            SELECT 
+                b.id,
+                b.budget_name,
+                b.total_budget,
+                b.currency,
+                COALESCE(SUM(bli.allocated_amount), 0) as total_allocated
+            FROM budgets b
+            LEFT JOIN budget_line_items bli ON b.id = bli.budget_id
+            WHERE b.id = ?
+            GROUP BY b.id, b.budget_name, b.total_budget, b.currency
+        ),
+        expense_summary AS (
+            SELECT 
+                b.id,
+                COALESCE(SUM(e.amount * e.quantity), 0) as total_spent
+            FROM budgets b
+            LEFT JOIN budget_line_items bli ON b.id = bli.budget_id
+            LEFT JOIN expenses e ON bli.id = e.line_item_id
+            WHERE b.id = ?
+            GROUP BY b.id
+        )
         SELECT 
-            b.id,
-            b.budget_name,
-            b.total_budget,
-            b.currency,
-            COALESCE(SUM(bli.allocated_amount), 0) as total_allocated,
-            COALESCE(SUM(e.amount * e.quantity), 0) as total_spent,
-            b.total_budget - COALESCE(SUM(bli.allocated_amount), 0) as remaining_budget
-        FROM budgets b
-        LEFT JOIN budget_line_items bli ON b.id = bli.budget_id
-        LEFT JOIN expenses e ON bli.id = e.line_item_id
-        WHERE b.id = ?
-        GROUP BY b.id, b.budget_name, b.total_budget, b.currency
-    ''', (budget_id,))
+            bs.*,
+            es.total_spent,
+            CASE 
+                WHEN bs.total_allocated > bs.total_budget THEN 0
+                ELSE bs.total_budget - bs.total_allocated
+            END as remaining_budget
+        FROM budget_summary bs
+        LEFT JOIN expense_summary es ON bs.id = es.id
+    ''', (budget_id, budget_id))
     budget = dict(cursor.fetchone())
     conn.close()
     return budget
@@ -302,12 +328,12 @@ def display_budget_line_items(budget_id, budget_name):
                     update_submit = st.form_submit_button("Update Line Item")
                     
                     if update_submit and line_item_id:
-                        if validate_budget_allocation(budget_id, new_amount):
+                        if validate_budget_allocation(budget_id, new_amount, line_item_id):
                             update_budget_line_item(line_item_id, new_name, new_amount)
                             st.success("Line item updated successfully!")
-                            st.rerun()  # Changed from st.experimental_rerun()
+                            st.rerun()
                         else:
-                            st.error("New allocation exceeds available budget!")
+                            st.error("New allocation would exceed available budget!")
 
     # Product Management Section
     st.subheader("Product Management")
@@ -554,16 +580,29 @@ def calculate_line_item_totals(line_item_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
+        WITH expense_totals AS (
+            SELECT 
+                line_item_id,
+                SUM(amount * quantity) as total_spent
+            FROM expenses
+            WHERE line_item_id = ?
+            GROUP BY line_item_id
+        )
         SELECT 
             bli.allocated_amount,
-            COALESCE(SUM(e.amount * e.quantity), 0) as total_spent,
-            bli.allocated_amount - COALESCE(SUM(e.amount * e.quantity), 0) as remaining
+            COALESCE(et.total_spent, 0) as total_spent,
+            bli.allocated_amount - COALESCE(et.total_spent, 0) as remaining
         FROM budget_line_items bli
-        LEFT JOIN expenses e ON bli.id = e.line_item_id
+        LEFT JOIN expense_totals et ON bli.id = et.line_item_id
         WHERE bli.id = ?
-        GROUP BY bli.id, bli.allocated_amount
-    ''', (line_item_id,))
-    totals = dict(cursor.fetchone())
+    ''', (line_item_id, line_item_id))
+    
+    result = cursor.fetchone()
+    totals = {
+        'allocated_amount': float(result['allocated_amount']),
+        'total_spent': float(result['total_spent']),
+        'remaining': float(result['allocated_amount'] - result['total_spent'])
+    }
     conn.close()
     return totals
 
