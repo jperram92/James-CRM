@@ -15,6 +15,15 @@ def get_db_connection():
         st.error(f"Error connecting to database: {e}")
         return None
 
+# Function to fetch contacts from the database
+def fetch_contacts():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM contacts")
+    contacts = cursor.fetchall()
+    conn.close()
+    return contacts
+
 # Function to insert document data into the database
 def insert_document(contact_id, document_name, document_path, signature):
     conn = get_db_connection()
@@ -73,22 +82,14 @@ def capture_signature():
         return signature
     return None
 
-# Function to generate and store the document
 def generate_and_store_document(contact_id, contact_name, contact_email, contact_phone):
-    # Trim any leading/trailing spaces from the input fields and print debug info
-    contact_id = contact_id.strip() if contact_id else ""
+    # Trim any leading/trailing spaces from the input fields, but don't strip contact_id since it's an integer
     contact_name = contact_name.strip() if contact_name else ""
     contact_email = contact_email.strip() if contact_email else ""
     contact_phone = contact_phone.strip() if contact_phone else ""
     
-    # Debugging output to check what's being entered
-    st.write(f"Contact ID: '{contact_id}'")
-    st.write(f"Contact Name: '{contact_name}'")
-    st.write(f"Contact Email: '{contact_email}'")
-    st.write(f"Contact Phone: '{contact_phone}'")
-    
     # Validate contact details - Check if any field is empty
-    if not contact_id or not contact_name or not contact_email or not contact_phone:
+    if not contact_name or not contact_email or not contact_phone:
         st.error("Please fill in all the contact details.")
         return
     
@@ -109,6 +110,9 @@ def generate_and_store_document(contact_id, contact_name, contact_email, contact
         # Display success message
         st.success("Document generated and signature saved successfully!")
 
+        # Show the signature for verification
+        st.write(f"Captured Signature: {signature}")
+
         # Optionally, you can save the PDF to a file system
         with open(document_path, "wb") as f:
             f.write(pdf_output.read())
@@ -119,22 +123,36 @@ def generate_and_store_document(contact_id, contact_name, contact_email, contact
         href = f'<a href="data:file/pdf;base64,{b64_pdf}" download="document.pdf">Download the document</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-
 # Streamlit interface
 def document_page():
     st.title("Document Generation and Signature")
 
-    # Collect contact information (this can be fetched from the database or form input)
-    contact_id = st.text_input("Enter Contact ID:")
-    contact_name = st.text_input("Enter Contact Name:")
-    contact_email = st.text_input("Enter Contact Email:")
-    contact_phone = st.text_input("Enter Contact Phone:")
-    
-    if st.button("Generate Document"):
-        if contact_id and contact_name and contact_email and contact_phone:
+    # Fetch contacts from the database
+    contacts = fetch_contacts()
+
+    # Display a dropdown menu with the list of contacts
+    if contacts:
+        contact_names = [f"{contact['name']} ({contact['email']})" for contact in contacts]
+        contact_selection = st.selectbox("Select a contact", contact_names)
+
+        # Fetch selected contact details
+        selected_contact = contacts[contact_names.index(contact_selection)]
+        contact_id = selected_contact['id']
+        contact_name = selected_contact['name']
+        contact_email = selected_contact['email']
+        contact_phone = selected_contact['phone']
+
+        # Display the contact information
+        st.write(f"Contact ID: {contact_id}")
+        st.write(f"Contact Name: {contact_name}")
+        st.write(f"Contact Email: {contact_email}")
+        st.write(f"Contact Phone: {contact_phone}")
+
+        # Generate document button
+        if st.button("Generate Document"):
             generate_and_store_document(contact_id, contact_name, contact_email, contact_phone)
-        else:
-            st.error("Please fill in all the contact details.")
+    else:
+        st.write("No contacts found in the database.")
 
 # Run the document generation page
 if __name__ == "__main__":
