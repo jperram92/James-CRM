@@ -10,6 +10,7 @@ cursor = conn.cursor()
 cursor.execute('DROP TABLE IF EXISTS contacts')
 cursor.execute('DROP TABLE IF EXISTS applications')
 cursor.execute('DROP TABLE IF EXISTS application_documents')
+cursor.execute('DROP TABLE IF EXISTS budgets')  # Drop budgets table if it exists
 
 # Create a table for storing contact information if it doesn't already exist
 cursor.execute(''' 
@@ -54,8 +55,25 @@ CREATE TABLE IF NOT EXISTS application_documents (
 )
 ''')
 
+# Create a table for storing budget information
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS budgets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER,
+    budget_name TEXT NOT NULL,
+    total_budget DECIMAL(10, 2),
+    current_spent DECIMAL(10, 2) DEFAULT 0.00,
+    remaining_budget AS (total_budget - current_spent),
+    start_date DATE,
+    end_date DATE,
+    currency TEXT,
+    status TEXT DEFAULT 'Active',
+    FOREIGN KEY (contact_id) REFERENCES contacts(id)
+)
+''')
+
 # Insert some sample (rubbish) data into the contacts table for testing
-cursor.executemany('''
+cursor.executemany(''' 
 INSERT INTO contacts (title, gender, name, email, phone, message, address_line, suburb, postcode, state, country)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''', [
@@ -88,6 +106,18 @@ VALUES (?, ?, ?, ?)
     (3, 'Application Form 3', '/path/to/application_form_3.pdf', None),
     (4, 'Application Form 4', '/path/to/application_form_4.pdf', None),
     (5, 'Application Form 5', '/path/to/application_form_5.pdf', None)
+])
+
+# Insert some sample budget data for testing
+cursor.executemany('''
+INSERT INTO budgets (contact_id, budget_name, total_budget, start_date, end_date, currency)
+VALUES (?, ?, ?, ?, ?, ?)
+''', [
+    (1, '2025 Marketing', 50000.00, '2025-01-01', '2025-12-31', 'USD'),
+    (1, 'Client X Project', 10000.00, '2025-03-01', '2025-06-30', 'USD'),
+    (2, 'Web Development', 25000.00, '2025-02-01', '2025-08-31', 'AUD'),
+    (3, 'AI Research', 30000.00, '2025-01-01', '2025-12-31', 'EUR'),
+    (4, 'Project Management', 40000.00, '2025-04-01', '2025-09-30', 'AUD')
 ])
 
 # Commit the changes and close the connection
