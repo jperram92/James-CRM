@@ -57,8 +57,9 @@ def create_document(contact_id, contact_name, contact_email, contact_phone):
     # Create a buffer to store the PDF
     pdf_output = BytesIO()
 
-    # Write the PDF to the buffer using None for the filename and 'F' for file-like object
-    pdf.output(pdf_output, 'F')  # 'F' indicates we are writing to a file-like object (not a file)
+    # Manually write to the buffer instead of using pdf.output(pdf_output)
+    # Convert the PDF content into bytes and write to the buffer
+    pdf_output.write(pdf.output(dest='S').encode('latin1'))  # 'S' writes the content to memory
     pdf_output.seek(0)  # Reset the buffer pointer to the beginning of the file
 
     return pdf_output
