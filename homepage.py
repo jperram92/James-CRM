@@ -76,6 +76,14 @@ def home():
                 transition: all 0.3s ease-in-out;
             }
 
+            /* Position the logo at the top-right corner */
+            .logo {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 50%; /* Resize to half the size */
+            }
+
             @keyframes fadeIn {
                 0% {
                     opacity: 0;
@@ -102,6 +110,9 @@ def home():
             }
         </style>
     """, unsafe_allow_html=True)
+
+    # Add the logo to the top right (use_container_width instead of deprecated use_column_width)
+    st.image('BusinessTracker.png', use_container_width=False, width=200)  # Resize to 200px (half size)
 
     # Header section
     st.markdown('<div class="header">Welcome to Your CRM</div>', unsafe_allow_html=True)
