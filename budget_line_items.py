@@ -171,6 +171,46 @@ def validate_budget_allocation(budget_id, new_allocation):
     conn.close()
     return (current_total + new_allocation) <= total_budget
 
+# Add new function to get budget details
+def get_budget_details(budget_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            b.id,
+            b.budget_name,
+            b.total_budget,
+            b.currency,
+            COALESCE(SUM(bli.allocated_amount), 0) as total_allocated,
+            b.total_budget - COALESCE(SUM(bli.allocated_amount), 0) as remaining_budget
+        FROM budgets b
+        LEFT JOIN budget_line_items bli ON b.id = bli.budget_id
+        WHERE b.id = ?
+        GROUP BY b.id
+    ''', (budget_id,))
+    budget = dict(cursor.fetchone())
+    conn.close()
+    return budget
+
+# Add function to get all budgets for a contact
+def get_contact_budgets(contact_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            b.id,
+            b.budget_name,
+            b.total_budget,
+            b.currency,
+            b.start_date,
+            b.end_date
+        FROM budgets b
+        WHERE b.contact_id = ?
+    ''', (contact_id,))
+    budgets = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return budgets
+
 def display_budget_line_items(budget_id, budget_name):
     st.subheader(f"Line Items for Budget: {budget_name}")
     
@@ -366,13 +406,75 @@ def display_budget_line_items(budget_id, budget_name):
                                 st.success("Product updated successfully!")
                                 st.experimental_rerun()
 
-def manage_budget_line_items(budget_id, budget_name):
+# Update the manage_budget_line_items function
+def manage_budget_line_items():
     st.title("Budget Line Items Management")
-    display_budget_line_items(budget_id, budget_name)
 
+    # Get contacts for selection
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, email FROM contacts')
+    contacts = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    # Contact selection
+    contact_options = [f"{c['name']} ({c['email']})" for c in contacts]
+    selected_contact = st.selectbox("Select Contact", contact_options)
+    
+    # Get contact_id from selection
+    contact_id = None
+    for contact in contacts:
+        if f"{contact['name']} ({contact['email']})" == selected_contact:
+            contact_id = contact['id']
+            break
+
+    if contact_id:
+        # Get budgets for selected contact
+        budgets = get_contact_budgets(contact_id)
+        
+        if budgets:
+            # Create budget selection
+            budget_options = [f"{b['budget_name']} ({b['currency']} {b['total_budget']:,.2f})" for b in budgets]
+            selected_budget = st.selectbox("Select Budget", budget_options)
+            
+            # Get budget_id from selection
+            budget_id = None
+            for budget in budgets:
+                if f"{budget['budget_name']} ({budget['currency']} {budget['total_budget']:,.2f})" == selected_budget:
+                    budget_id = budget['id']
+                    break
+
+            if budget_id:
+                # Display budget summary
+                budget_details = get_budget_details(budget_id)
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(
+                        "Total Budget", 
+                        f"{budget_details['currency']} {budget_details['total_budget']:,.2f}"
+                    )
+                
+                with col2:
+                    st.metric(
+                        "Total Allocated", 
+                        f"{budget_details['currency']} {budget_details['total_allocated']:,.2f}"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Remaining Budget", 
+                        f"{budget_details['currency']} {budget_details['remaining_budget']:,.2f}"
+                    )
+
+                # Display line items and products
+                display_budget_line_items(budget_id, budget_details['budget_name'])
+        else:
+            st.warning("No budgets found for selected contact.")
+    else:
+        st.info("Please select a contact to view their budgets.")
+
+# Update the main section
 if __name__ == "__main__":
     st.set_page_config(page_title="Budget Line Items Management", layout="wide")
-    # For testing purposes
-    sample_budget_id = 1
-    sample_budget_name = "Sample Budget"
-    manage_budget_line_items(sample_budget_id, sample_budget_name)
+    manage_budget_line_items()
