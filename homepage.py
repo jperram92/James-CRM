@@ -138,7 +138,7 @@ def home():
     # Call to Action button with animation
     st.markdown(""" 
         <div style="text-align:center;">
-            <a href="http://localhost:8501/" class="button" style="color: white;">Manage Contacts</a>
+            <a href="http://localhost:8501" class="button" style="color: white;">Manage Applications</a>
         </div>
     """, unsafe_allow_html=True)
 
