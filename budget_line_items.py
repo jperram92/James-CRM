@@ -277,7 +277,7 @@ def display_budget_line_items(budget_id, budget_name):
                     if validate_budget_allocation(budget_id, allocated_amount):
                         create_budget_line_item(budget_id, line_item_name, allocated_amount)
                         st.success("Line item created successfully!")
-                        st.experimental_rerun()
+                        st.rerun()  # Changed from st.experimental_rerun()
                     else:
                         st.error("Allocation exceeds available budget!")
 
@@ -303,7 +303,7 @@ def display_budget_line_items(budget_id, budget_name):
                         if validate_budget_allocation(budget_id, new_amount):
                             update_budget_line_item(line_item_id, new_name, new_amount)
                             st.success("Line item updated successfully!")
-                            st.experimental_rerun()
+                            st.rerun()  # Changed from st.experimental_rerun()
                         else:
                             st.error("New allocation exceeds available budget!")
 
@@ -375,7 +375,7 @@ def display_budget_line_items(budget_id, budget_name):
                             create_product(line_item_id, product_name, product_group, rate, 
                                         frequency, service_name, description)
                             st.success("Product added successfully!")
-                            st.experimental_rerun()
+                            st.rerun()  # Changed from st.experimental_rerun()
             
             # Update Product
             with prod_col2:
@@ -404,7 +404,7 @@ def display_budget_line_items(budget_id, budget_name):
                                 update_product(product_id, new_product_name, new_product_group,
                                             new_rate, new_frequency, new_service_name, new_description)
                                 st.success("Product updated successfully!")
-                                st.experimental_rerun()
+                                st.rerun()  # Changed from st.experimental_rerun()
 
             # Add Expenses Section
             st.subheader(f"Expenses for {selected_line_item_for_products}")
