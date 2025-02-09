@@ -438,6 +438,68 @@ def display_budget_line_items(budget_id, budget_name):
                 with col3:
                     st.metric("Remaining", f"{currency} {totals['remaining']:,.2f}")
 
+            # Add Expense Button
+            with st.expander("Add New Expense"):
+                with st.form(key="add_expense_form"):
+                    line_item_products = get_line_item_products(line_item_id)
+                    if line_item_products:
+                        product_options = [p['product_name'] for p in line_item_products]
+                        selected_product = st.selectbox("Select Product", product_options)
+                        
+                        # Get product_id and rate from selection
+                        product_id = None
+                        default_rate = 0.0
+                        for prod in line_item_products:
+                            if prod['product_name'] == selected_product:
+                                product_id = prod['id']
+                                default_rate = float(prod['rate'])  # Convert to float
+                                break
+                        
+                        # Expense details - ensure all numeric values are float
+                        expense_amount = st.number_input(
+                            "Amount", 
+                            min_value=0.0,  # Float
+                            value=default_rate,  # Already float
+                            step=0.01,  # Float
+                            format="%.2f"  # Format as float
+                        )
+                        
+                        expense_quantity = st.number_input(
+                            "Quantity", 
+                            min_value=0.1,  # Float
+                            value=1.0,  # Float
+                            step=0.1,  # Float
+                            format="%.1f"  # Format as float
+                        )
+                        
+                        expense_date = st.date_input("Date Incurred")
+                        expense_description = st.text_area("Description")
+                        
+                        # Show total calculation
+                        total_expense = float(expense_amount) * float(expense_quantity)
+                        st.write(f"Total Expense: {currency} {total_expense:,.2f}")
+                        
+                        # Submit button
+                        submit_expense = st.form_submit_button("Add Expense")
+                        
+                        if submit_expense and product_id:
+                            totals = calculate_line_item_totals(line_item_id)
+                            if float(totals['total_spent'] + total_expense) <= float(totals['allocated_amount']):
+                                add_expense(
+                                    line_item_id=line_item_id,
+                                    product_id=product_id,
+                                    amount=float(expense_amount),
+                                    quantity=float(expense_quantity),
+                                    date_incurred=expense_date,
+                                    description=expense_description
+                                )
+                                st.success("Expense added successfully!")
+                                st.rerun()
+                            else:
+                                st.error("This expense would exceed the allocated budget!")
+                    else:
+                        st.warning("Please add products to this line item before adding expenses.")
+
 # Add after the existing functions
 
 def add_expense(line_item_id, product_id, amount, quantity, date_incurred, description):
