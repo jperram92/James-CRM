@@ -9,6 +9,7 @@ cursor = conn.cursor()
 # Drop the tables if they exist (use with caution - this will delete data)
 cursor.execute('DROP TABLE IF EXISTS contacts')
 cursor.execute('DROP TABLE IF EXISTS applications')
+cursor.execute('DROP TABLE IF EXISTS application_documents')
 
 # Create a table for storing contact information if it doesn't already exist
 cursor.execute(''' 
@@ -40,6 +41,19 @@ CREATE TABLE IF NOT EXISTS applications (
 )
 ''')
 
+# Create a table for storing generated application documents and signatures
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS application_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER,
+    document_name TEXT,
+    document_path TEXT,
+    signature BLOB,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id)
+)
+''')
+
 # Insert some sample (rubbish) data into the contacts table for testing
 cursor.executemany('''
 INSERT INTO contacts (title, gender, name, email, phone, message, address_line, suburb, postcode, state, country)
@@ -62,6 +76,18 @@ VALUES (?, ?, ?, ?)
     (3, 'AI Researcher', 'Passionate about machine learning and AI technologies.', 'Python, TensorFlow, Keras'),
     (4, 'Project Manager', 'Looking to manage large-scale projects.', 'Leadership, Agile, Communication'),
     (5, 'Content Writer', 'Love creating content and articles for blogs and websites.', 'Writing, SEO, Research')
+])
+
+# Insert some sample (rubbish) data into the application_documents table for testing
+cursor.executemany('''
+INSERT INTO application_documents (contact_id, document_name, document_path, signature)
+VALUES (?, ?, ?, ?)
+''', [
+    (1, 'Application Form 1', '/path/to/application_form_1.pdf', None),
+    (2, 'Application Form 2', '/path/to/application_form_2.pdf', None),
+    (3, 'Application Form 3', '/path/to/application_form_3.pdf', None),
+    (4, 'Application Form 4', '/path/to/application_form_4.pdf', None),
+    (5, 'Application Form 5', '/path/to/application_form_5.pdf', None)
 ])
 
 # Commit the changes and close the connection
