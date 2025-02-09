@@ -127,8 +127,7 @@ if contact_id:
 
     # Create New Budget Button
     with create_col:
-        create_budget_button = st.button("Create New Budget")
-        if create_budget_button:
+        with st.expander("Create New Budget"):
             with st.form(key="create_budget_form"):
                 budget_name = st.text_input("Budget Name")
                 total_budget = st.number_input("Total Budget", min_value=0.0, step=0.01)
@@ -141,14 +140,11 @@ if contact_id:
 
     # Update Budget Button
     with update_col:
-        update_budget_button = st.button("Update Budget")
-        if update_budget_button:
+        with st.expander("Update Budget"):
             with st.form(key="update_budget_form"):
-                # Get list of budget names for the selected contact
                 budget_names = [budget['budget_name'] for budget in budgets]
                 selected_budget = st.selectbox("Select Budget to Update", budget_names)
                 
-                # Find the budget ID from the selected name
                 budget_id_to_update = None
                 for budget in budgets:
                     if budget['budget_name'] == selected_budget:
@@ -167,14 +163,11 @@ if contact_id:
 
     # Delete Budget Button
     with delete_col:
-        delete_budget_button = st.button("Delete Budget")
-        if delete_budget_button:
+        with st.expander("Delete Budget"):
             with st.form(key="delete_budget_form"):
-                # Get list of budget names for the selected contact
                 budget_names = [budget['budget_name'] for budget in budgets]
                 selected_budget = st.selectbox("Select Budget to Delete", budget_names)
                 
-                # Find the budget ID from the selected name
                 budget_id_to_delete = None
                 for budget in budgets:
                     if budget['budget_name'] == selected_budget:
