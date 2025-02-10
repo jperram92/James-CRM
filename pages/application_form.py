@@ -1,11 +1,16 @@
 import streamlit as st
 import sqlite3
 from sqlite3 import Error
+import sys
 
 # Function to connect to the database
 def get_db_connection():
     try:
-        conn = sqlite3.connect('C:/Users/james/OneDrive/Desktop/James CRM/crm.db')
+        # Use test database if running tests
+        if 'unittest' in sys.modules:
+            conn = sqlite3.connect('test_crm.db')
+        else:
+            conn = sqlite3.connect('crm.db')
         conn.row_factory = sqlite3.Row
         return conn
     except Error as e:
@@ -24,13 +29,16 @@ def fetch_contacts():
 # Function to insert the new application data into the database
 def insert_application(contact_id, interest, reason, skillsets):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(''' 
-        INSERT INTO applications (contact_id, interest, reason, skillsets)
-        VALUES (?, ?, ?, ?)
-    ''', (contact_id, interest, reason, skillsets))  # Insert the new data
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(''' 
+            INSERT INTO applications (contact_id, interest, reason, skillsets)
+            VALUES (?, ?, ?, ?)
+        ''', (contact_id, interest, reason, skillsets))
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
 
 # Streamlit interface
 def application_form():
