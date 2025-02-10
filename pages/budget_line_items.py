@@ -2,11 +2,20 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
+import sys
 
 def get_db_connection():
-    conn = sqlite3.connect('crm.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        # Use test database if running tests
+        if 'unittest' in sys.modules:
+            conn = sqlite3.connect('test_crm.db')
+        else:
+            conn = sqlite3.connect('crm.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return None
 
 # Function to add a new budget line item
 def create_budget_line_item(budget_id, line_item_name, allocated_amount):
