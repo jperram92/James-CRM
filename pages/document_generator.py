@@ -113,33 +113,34 @@ def fetch_signature_from_db(contact_id):
 
 # Function to fetch contact and application details together
 def fetch_contact_with_application(contact_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Query to join contact data with application data
-    cursor.execute(''' 
-        SELECT c.id, c.name, c.email, c.phone, a.interest, a.reason, a.skillsets, d.document_name 
-        FROM contacts c 
-        JOIN applications a ON c.id = a.contact_id 
-        LEFT JOIN application_documents d ON c.id = d.contact_id 
-        WHERE c.id = ? 
-    ''', (contact_id,))
-    contact_data = cursor.fetchone()
-    conn.close()
-
-    # Check if contact data is found
-    if contact_data:
-        return {
-            "id": contact_data["id"],
-            "name": contact_data["name"],
-            "email": contact_data["email"],
-            "phone": contact_data["phone"],
-            "interest": contact_data["interest"],
-            "reason": contact_data["reason"],
-            "skillsets": contact_data["skillsets"],
-            "document_name": contact_data["document_name"]
-        }
-    return None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT 
+                c.name,
+                c.email,
+                c.phone,
+                a.interest,
+                a.reason,
+                a.skillsets
+            FROM contacts c
+            INNER JOIN applications a ON c.id = a.contact_id
+            WHERE c.id = ?
+        ''', (contact_id,))
+        result = cursor.fetchone()
+        
+        print(f"DEBUG: SQL Result: {result}")  # Debugging line
+        
+        if result:
+            return dict(result)
+        return None
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 # Function to create a form-like document with the signature next to the header
 def create_document(contact_name, contact_email, contact_phone, document_name, interest, reason, skillsets, signature_image=None, timestamp=None):
