@@ -6,9 +6,9 @@ from datetime import date
 import warnings
 import streamlit as st
 import logging
+from logging_config import configure_logging
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+configure_logging()
 
 # Suppress all warnings
 warnings.filterwarnings('ignore', category=Warning)
@@ -345,3 +345,17 @@ if __name__ == '__main__':
         def test_delete_budget(self):
             """Test budget deletion"""
             # Create a budget to delete
+            self.cursor.execute('''
+                INSERT INTO budgets (contact_id, budget_name, total_budget, start_date, end_date, currency)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (self.test_contact_id, 'Budget to Delete', 1000.00, '2025-01-01', '2025-12-31', 'USD'))
+            budget_id = self.cursor.lastrowid
+            self.conn.commit()
+            
+            # Delete the budget
+            delete_budget(budget_id)
+            
+            # Verify deletion
+            self.cursor.execute('SELECT * FROM budgets WHERE id = ?', (budget_id,))
+            budget = self.cursor.fetchone()
+            self.assertIsNone(budget)
