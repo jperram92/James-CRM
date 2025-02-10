@@ -108,5 +108,31 @@ class TestApplicationForm(unittest.TestCase):
         self.assertEqual(application['reason'], test_data['reason'])
         self.assertEqual(application['skillsets'], test_data['skillsets'])
 
+    def test_insert_application_with_empty_fields(self):
+        """Test inserting application with empty optional fields"""
+        self.cursor.execute('SELECT id FROM contacts WHERE email = ?', ('test@test.com',))
+        contact_id = self.cursor.fetchone()['id']
+        
+        app_id = insert_application(
+            contact_id,
+            interest="Python Development",
+            reason="",
+            skillsets=""
+        )
+        
+        self.cursor.execute('SELECT * FROM applications WHERE id = ?', (app_id,))
+        application = self.cursor.fetchone()
+        self.assertIsNotNone(application)
+        self.assertEqual(application['reason'], "")
+        self.assertEqual(application['skillsets'], "")
+
+    def test_fetch_contacts_empty_database(self):
+        """Test fetching contacts from empty database"""
+        self.cursor.execute('DELETE FROM contacts')
+        self.conn.commit()
+        
+        contacts = fetch_contacts()
+        self.assertEqual(len(contacts), 0)
+
 if __name__ == '__main__':
     unittest.main()

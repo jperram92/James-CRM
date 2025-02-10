@@ -156,5 +156,24 @@ class TestDocumentGenerator(unittest.TestCase):
         self.assertIsInstance(pdf_output, BytesIO)
         self.assertTrue(pdf_output.getvalue().startswith(b'%PDF'))
 
+    def test_create_document_with_special_characters(self):
+        """Test document creation with special characters in input"""
+        pdf_output = create_document(
+            contact_name="Test User @#$%",
+            contact_email="test@test.com",
+            contact_phone="1234567890",
+            document_name="Test Doc !@#",
+            interest="Dev & QA",
+            reason="Test reason (123)",
+            skillsets="Python, C++, Java;"
+        )
+        self.assertIsNotNone(pdf_output)
+        self.assertTrue(pdf_output.getvalue().startswith(b'%PDF'))
+
+    def test_fetch_signature_nonexistent_contact(self):
+        """Test fetching signature for non-existent contact"""
+        signature = fetch_signature_from_db(999)
+        self.assertIsNone(signature)
+
 if __name__ == '__main__':
     unittest.main()

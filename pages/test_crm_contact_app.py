@@ -113,6 +113,15 @@ class TestCRMContactApp(unittest.TestCase):
         result = insert_contact(title, gender, name, invalid_email, phone, message, address_line, suburb, postcode, state, country)
         self.assertFalse(result)
 
+    def test_insert_contact_duplicate_email(self):
+        """Test inserting contact with duplicate email"""
+        # Insert first contact
+        insert_contact("Mr.", "Male", "Test 1", "test@example.com", "123", "msg", "addr", "sub", "1234", "state", "country")
+        
+        # Try to insert second contact with same email
+        result = insert_contact("Mr.", "Male", "Test 2", "test@example.com", "456", "msg", "addr", "sub", "1234", "state", "country")
+        self.assertFalse(result)
+
     def test_update_contact(self):
         """Test contact update function"""
         # First insert a contact
@@ -191,6 +200,18 @@ class TestCRMContactApp(unittest.TestCase):
 
         search_results = search_contact_by_name("NonExistent User")
         self.assertEqual(len(search_results), 0)
+
+    def test_search_contact_case_insensitive(self):
+        """Test contact search with different case combinations"""
+        insert_contact("Mr.", "Male", "John Doe", "john@example.com", "123", "msg", "addr", "sub", "1234", "state", "country")
+        
+        results_lower = search_contact_by_name("john")
+        results_upper = search_contact_by_name("JOHN")
+        results_mixed = search_contact_by_name("JoHn")
+        
+        self.assertEqual(len(results_lower), 1)
+        self.assertEqual(len(results_upper), 1)
+        self.assertEqual(len(results_mixed), 1)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

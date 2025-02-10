@@ -124,6 +124,14 @@ class TestBudgetLineItems(unittest.TestCase):
         self.assertEqual(line_item['line_item_name'], line_item_name)
         self.assertEqual(line_item['allocated_amount'], allocated_amount)
 
+    def test_create_budget_line_item_exceeding_budget(self):
+        """Test creating line item exceeding budget total"""
+        line_item_name = 'Expensive Item'
+        allocated_amount = 2000.00  # More than budget total of 1000.00
+        
+        with self.assertRaises(Exception):
+            create_budget_line_item(self.test_budget_id, line_item_name, allocated_amount)
+
     def test_create_product(self):
         """Test product creation"""
         # First create a budget line item
@@ -154,6 +162,20 @@ class TestBudgetLineItems(unittest.TestCase):
         self.assertEqual(product['frequency'], frequency)
         self.assertEqual(product['service_name'], service_name)
         self.assertEqual(product['description'], description)
+
+    def test_create_product_with_zero_rate(self):
+        """Test creating product with zero rate"""
+        self.cursor.execute('''
+            INSERT INTO budget_line_items (budget_id, line_item_name, allocated_amount)
+            VALUES (?, ?, ?)
+        ''', (self.test_budget_id, 'Test Line Item', 500.00))
+        line_item_id = self.cursor.lastrowid
+        
+        create_product(line_item_id, "Free Product", "Free", 0.00, "One-time", "Free Service", "No cost product")
+        
+        self.cursor.execute('SELECT * FROM products WHERE line_item_id = ?', (line_item_id,))
+        product = self.cursor.fetchone()
+        self.assertEqual(product['rate'], 0.00)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -122,6 +122,18 @@ class TestBudgets(unittest.TestCase):
         self.assertEqual(budget['total_budget'], budget_data['total_budget'])
         self.assertEqual(budget['currency'], budget_data['currency'])
 
+    def test_create_budget_with_past_dates(self):
+        """Test creating budget with past dates"""
+        with self.assertRaises(ValueError):
+            create_budget(
+                self.test_contact_id,
+                "Past Budget",
+                1000.00,
+                date(2020, 1, 1),
+                date(2020, 12, 31),
+                "USD"
+            )
+
     def test_update_budget(self):
         """Test budget update"""
         # First create a budget
@@ -142,6 +154,20 @@ class TestBudgets(unittest.TestCase):
         budget = self.cursor.fetchone()
         self.assertEqual(budget['budget_name'], new_name)
         self.assertEqual(budget['total_budget'], new_total)
+
+    def test_update_budget_status(self):
+        """Test updating budget status"""
+        self.cursor.execute('''
+            INSERT INTO budgets (contact_id, budget_name, total_budget, start_date, end_date, currency)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (self.test_contact_id, 'Active Budget', 1000.00, '2025-01-01', '2025-12-31', 'USD'))
+        budget_id = self.cursor.lastrowid
+        
+        update_budget(budget_id, status='Completed')
+        
+        self.cursor.execute('SELECT status FROM budgets WHERE id = ?', (budget_id,))
+        status = self.cursor.fetchone()['status']
+        self.assertEqual(status, 'Completed')
 
     def test_get_budgets_for_contact(self):
         """Test fetching budgets for a contact"""
